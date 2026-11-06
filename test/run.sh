@@ -319,10 +319,20 @@ sleep 3; before="$(watchers)"; kill -TERM $np; wait $np; code=$?; sleep 1
 check "SIGTERM to node: tsc-rs --watch was running" "[ -n \"$before\" ]"
 check "SIGTERM to node: exit matches tsc-rs's own ($direct)" "[ $code -eq $direct ]"
 check "SIGTERM to node: no orphaned tsc-rs" "[ -z \"\$(watchers)\" ]"
+# Whether npm's SIGTERM reaches the compiler depends on /bin/sh: bash execs
+# the script's command, dash (Ubuntu) does not, so there the node process is
+# left running even without the redirect. The redirect must do no worse.
+upstream() { pgrep -f "bin/tsc --watch --noEmit" | tr '\n' ' '; }
 npm run -s w >/dev/null 2>&1 & np=$!
 sleep 4; before="$(watchers)"; kill -TERM $np; wait $np 2>/dev/null; sleep 2
+orphan_rs="$(watchers)"
+for p in $orphan_rs $(upstream); do kill -TERM "$p" 2>/dev/null; done; sleep 1
+TSC_RS=typescript npm run -s w >/dev/null 2>&1 & np=$!
+sleep 6; kill -TERM $np; wait $np 2>/dev/null; sleep 2
+orphan_up="$(upstream)"
+for p in $orphan_up; do kill -TERM "$p" 2>/dev/null; done
 check "SIGTERM to npm: tsc-rs --watch was running" "[ -n \"$before\" ]"
-check "SIGTERM to npm: no orphaned tsc-rs" "[ -z \"\$(watchers)\" ]"
+check "SIGTERM to npm: tsc-rs is stopped wherever upstream tsc is (orphans: tsc-rs '$orphan_rs', upstream '$orphan_up')" "[ -z \"$orphan_rs\" ] || [ -n \"$orphan_up\" ]"
 for p in $(watchers); do kill -TERM "$p" 2>/dev/null; done
 
 echo "# $PASS passed, $FAIL failed (work dir $WORK)"
