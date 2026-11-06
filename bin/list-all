@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+. "$(dirname "$0")/../lib/utils.bash"
+list_all_versions | sort_versions | xargs echo

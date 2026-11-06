@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# asdf cmd tsc-rs enable [shell [file] | claude [file] | print | help]
+set -euo pipefail
+. "$(dirname "${BASH_SOURCE[0]}")/../redirect.bash"
+
+case "${1:-shell}" in
+print)
+	install_proxy
+	echo "NODE_OPTIONS=$(require_fragment)"
+	;;
+shell | claude)
+	install_proxy
+	enable_target "${1:-shell}" "${2:-}"
+	version_hint
+	;;
+help)
+	cat <<'USAGE'
+usage: asdf cmd tsc-rs enable [target]
+  shell [file]    add NODE_OPTIONS to a shell profile (default: ~/.zshenv, ~/.bashrc
+                  or fish conf.d, chosen from $SHELL)
+  claude [file]   add NODE_OPTIONS to Claude Code's settings env
+                  (default: ~/.claude/settings.json)
+  print           install the redirect and print the NODE_OPTIONS value only
+USAGE
+	;;
+*) die "unknown target \"$1\"; use shell, claude or print (asdf cmd tsc-rs enable help)" ;;
+esac

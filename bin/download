@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+. "$(dirname "$0")/../lib/utils.bash"
+[ "${ASDF_INSTALL_TYPE:-version}" = version ] || fail "only released versions are supported, not ${ASDF_INSTALL_TYPE}"
+: "${ASDF_INSTALL_VERSION:?}" "${ASDF_DOWNLOAD_PATH:?}"
+download_release "$ASDF_INSTALL_VERSION" "$ASDF_DOWNLOAD_PATH"

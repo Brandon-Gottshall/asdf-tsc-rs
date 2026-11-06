@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# asdf cmd tsc-rs status
+set -uo pipefail
+. "$(dirname "${BASH_SOURCE[0]}")/../redirect.bash"
+set +e
+
+if [ "${1:-}" = help ]; then
+	echo "usage: asdf cmd tsc-rs status    show what is enabled and which tsc-rs version applies here"
+	exit 0
+fi
+current_home="$TSC_RS_HOME"
+any=0
+while IFS= read -r h; do
+	use_home "$h"
+	[ "$h" = "$current_home" ] || { [ -e "$PROXY" ] || [ -s "$TARGETS" ]; } || continue
+	if [ -f "$PROXY" ]; then
+		if cmp -s "$PROXY" "$REDIRECT_PLUGIN_DIR/proxy/tsc-proxy.cjs"; then state="current"; else state="differs from the plugin copy; run: asdf cmd tsc-rs enable"; fi
+		echo "redirect:   $PROXY ($state)"
+	else
+		echo "redirect:   not installed (asdf cmd tsc-rs enable)"
+	fi
+	[ -s "$TARGETS" ] || continue
+	while IFS=$'\t' read -r kind file; do
+		any=1
+		if [ -f "$file" ] && grep -qF "$PROXY" "$file"; then mark="enabled"; else mark="recorded, but the file no longer loads it"; fi
+		echo "target:     $kind $file ($mark)"
+	done <"$TARGETS"
+done < <(state_homes)
+[ "$any" = 1 ] || echo "target:     none"
+case "${NODE_OPTIONS:-}" in
+*tsc-proxy.cjs*) echo "this shell: NODE_OPTIONS loads a tsc redirect" ;;
+*) echo "this shell: NODE_OPTIONS does not load the redirect" ;;
+esac
+if [ -n "${TSC_RS:-}" ]; then echo "selection:  TSC_RS=$TSC_RS"; else echo "selection:  tsc-rs (TSC_RS is unset)"; fi
+echo "version:"
+asdf current tsc-rs 2>&1 | sed 's/^/  /'

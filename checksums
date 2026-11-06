@@ -1,0 +1,31 @@
+# Archive checksums pinned in this repo, verified in addition to the release's SHA256SUMS.
+# Added with scripts/pin-release.sh, which checks each against SHA256SUMS and the downloaded archive.
+96920e12262ebe390dfa4876c3cf8ed03aa594ce99222a00e0f1517e945ba205  tsc-rs-0.1.0-darwin-arm64.tar.gz
+11dc30c9e69082acc9d9e05cd562e1334d361342b09950da58a6709adef4fda2  tsc-rs-0.1.0-linux-x64.tar.gz
+90cce32e6d48b05c4151b25f18711394723836c52624207bee012c2cd2f9bcdc  tsc-rs-0.2.0-darwin-arm64.tar.gz
+7e8b7635c78bc7fe6869a600765b35c59b4740f55c4293dc707bf9cad11eb40b  tsc-rs-0.2.0-linux-arm64.tar.gz
+403e72534958ad0d1077a58d69ee3eda1996b8c3f14321011e6cc40174fc59dc  tsc-rs-0.2.0-linux-x64.tar.gz
+3536154507d63dce06786651d28f8e37560c864231855078a262287cde4020ef  tsc-rs-0.3.0-darwin-arm64.tar.gz
+75c886e92db7c27d667a6ff0f9880fe6530aba087b90aec6bc82f95aa4fa7ae4  tsc-rs-0.3.0-darwin-x64.tar.gz
+93978fe6fe60fa6e4da9722131203a65ecac6eada41e79ce786cb8d2d1b9c653  tsc-rs-0.3.0-linux-arm64.tar.gz
+43e845ada6ed26bec76b75b333063a427ed1ae972c9d3a0caee71866bddf9fe0  tsc-rs-0.3.0-linux-x64.tar.gz
+8b9cd723fd597a652b55e4c5fcda422bf36031199ae1478a2e6d3fecd7d27194  tsc-rs-0.4.0-darwin-arm64.tar.gz
+dbf8668f7780ae48b4aa00c9f69931ecb9de0631c39b8054662a9f7c39d44d06  tsc-rs-0.4.0-darwin-x64.tar.gz
+255cf9fcaa05249c78dcab8c866e85c986164af36578c755a52f950305c420ce  tsc-rs-0.4.0-linux-arm64.tar.gz
+d17ec6de6fc8ca3b678ed0c182a89269e5e04457089f7d8b0f834a42c5b05582  tsc-rs-0.4.0-linux-x64.tar.gz
+249e0201dddf40e6de4025ecd1db207fe6503140a8f44e888c96a93381e8d5a2  tsc-rs-0.5.0-darwin-arm64.tar.gz
+ccd1cb972ae89bff614703bbbe06da0447504ea8fbd094a18df20d4e10ded9c0  tsc-rs-0.5.0-darwin-x64.tar.gz
+970018dceb889ee99bb0310b1c93b5d04c883c7a813778d00379e57a8365c939  tsc-rs-0.5.0-linux-arm64.tar.gz
+b04654b6eede798b7263b249332e18dcc34b2e51eb0f2d7d59333a8e481b5233  tsc-rs-0.5.0-linux-x64.tar.gz
+caf4236d9d80b613b8abfa74aff9685ce38d8d83cb0a212b33db51ea3060a9c7  tsc-rs-0.6.0-darwin-arm64.tar.gz
+c7f76525cb5faa56c858423db9991288648aeeaf798fca9f542bdd20d4f4aa62  tsc-rs-0.6.0-darwin-x64.tar.gz
+f8fa15f3a1873def5d1c789c9712b2aa3c7c1a817eb4d53f038915d0d9586042  tsc-rs-0.6.0-linux-arm64.tar.gz
+922af4f4371ddc4c690f8c19142f32c52e124f0ce0e58c19fdd2f4db2cffb471  tsc-rs-0.6.0-linux-x64.tar.gz
+05231466be7909a4b51b0c247c4ef14428080a5c44c69fa513f3632661d4b694  tsc-rs-0.7.0-darwin-arm64.tar.gz
+40868df6652efb413989c0c74f484e8f48c4889586b741981e0feb6bbc0a0de8  tsc-rs-0.7.0-darwin-x64.tar.gz
+ade1d9953dfe11acf76f990ab751addd0d7eb8d5d0b53e7059334307fb60aa7c  tsc-rs-0.7.0-linux-arm64.tar.gz
+393d9ba77b1941808d4a88d108e5b63d6840c4e68f7d45a353509a199b89b7a1  tsc-rs-0.7.0-linux-x64.tar.gz
+930ac252b90901ad6714522aaecdbc6b4e0151d8516b5caa406e68cfce7a34d3  tsc-rs-0.8.0-darwin-arm64.tar.gz
+dac6d4ba3219ab25083b3b39a82d74d1b9bb292913f1322dfd207e09151c7f80  tsc-rs-0.8.0-darwin-x64.tar.gz
+9f5f2cf7993f032a88b558921388662999d0ec5f7ad8e94edb142611be6f30c5  tsc-rs-0.8.0-linux-arm64.tar.gz
+909bc899363a368f5f482494dfe22061510ee3389d1a34e7ee1b4dd6a26fd512  tsc-rs-0.8.0-linux-x64.tar.gz

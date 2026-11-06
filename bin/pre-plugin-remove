@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# asdf removes the plugin and its installs even if this fails, so turn the
+# redirect off first: otherwise every tsc run would fail with "not installed".
+# disable_all handles each target on its own and names any it could not undo.
+set -euo pipefail
+. "$(dirname "$0")/../lib/redirect.bash"
+disable_all

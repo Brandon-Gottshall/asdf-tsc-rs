@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# asdf cmd tsc-rs [help]
+cat <<'USAGE'
+usage: asdf cmd tsc-rs <command>
+  enable [shell [file] | claude [file] | print]   run tsc-rs wherever tsc would run
+  disable [shell [file] | claude [file]]          undo enable (everywhere, with no target)
+  status                                          what is enabled, and the version here
+Add "help" after a command for details, e.g. asdf cmd tsc-rs enable help
+USAGE

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+echo "Plugin:   https://github.com/Brandon-Gottshall/asdf-tsc-rs"
+echo "Upstream: https://github.com/pingdotgg/ts-rust"
+echo "Releases: https://github.com/pingdotgg/ts-rust/releases"

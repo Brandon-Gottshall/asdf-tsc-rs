@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+echo "tsc-rs, the Rust port of the TypeScript compiler (https://github.com/pingdotgg/ts-rust),"
+echo "installed from verified upstream archives as the \`tsc-rs\` command."
+echo
+echo "Optional: \`asdf cmd tsc-rs enable\` runs tsc-rs wherever node would run \`tsc\`,"
+echo "including package scripts and a project's node_modules/.bin/tsc."
+echo "\`asdf cmd tsc-rs status\` shows what is active; \`asdf cmd tsc-rs disable\` undoes it."

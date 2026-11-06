@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# asdf cmd tsc-rs disable [shell [file] | claude [file] | help]
+# With no target, removes the redirect from every place `enable` added it.
+set -euo pipefail
+. "$(dirname "${BASH_SOURCE[0]}")/../redirect.bash"
+
+rc=0
+case "${1:-}" in
+"") disable_all || rc=1 ;;
+shell)
+	file="${2:-$(default_shell_file)}"
+	disable_target shell "$(abspath "$file")" || rc=1
+	;;
+claude) disable_target claude "$(abspath "${2:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json}")" || rc=1 ;;
+help)
+	cat <<'USAGE'
+usage: asdf cmd tsc-rs disable [target]
+  (none)          remove the redirect from every place enable added it
+  shell [file]    remove it from one shell profile (default chosen from $SHELL)
+  claude [file]   remove it from one Claude Code settings file
+                  (default: ~/.claude/settings.json)
+USAGE
+	exit 0
+	;;
+*) die "unknown target \"$1\"; use shell or claude, or no target for all (asdf cmd tsc-rs disable help)" ;;
+esac
+if [ "$DISABLED_ANY" = 1 ]; then
+	say "new shells and sessions run their usual TypeScript; ones already running keep the redirect until restarted"
+	say "$PROXY is kept so running processes that load it still start"
+fi
+exit "$rc"

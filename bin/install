@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+. "$(dirname "$0")/../lib/utils.bash"
+[ "${ASDF_INSTALL_TYPE:-version}" = version ] || fail "only released versions are supported, not ${ASDF_INSTALL_TYPE}"
+: "${ASDF_INSTALL_VERSION:?}" "${ASDF_DOWNLOAD_PATH:?}" "${ASDF_INSTALL_PATH:?}"
+# fail() exits, so cleanup must run from a trap rather than an || branch.
+trap 'rm -rf "${ASDF_INSTALL_PATH:?}"' EXIT
+install_release "$ASDF_INSTALL_VERSION" "$ASDF_DOWNLOAD_PATH" "$ASDF_INSTALL_PATH"
+trap - EXIT

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Keeps an enabled redirect in step with the updated plugin.
+set -euo pipefail
+. "$(dirname "$0")/../lib/redirect.bash"
+refresh_proxy
