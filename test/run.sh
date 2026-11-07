@@ -49,6 +49,8 @@ check "only tsc-rs is exposed in bin/" "[ \"\$(ls $INST/bin)\" = tsc-rs ]"
 check "lib .d.ts files sit next to the executable" "[ \$(ls $INST/libexec | grep -c '^lib.*d.ts$') -gt 100 ]"
 check "shim resolves through ASDF_TSC_RS_VERSION" "ASDF_TSC_RS_VERSION=$PIN $ASDF_DATA_DIR/shims/tsc-rs --version | grep -q Version"
 check "every pinned checksum line is well formed" "! grep -v '^#' \"$REPO/checksums\" | grep -vE '^[0-9a-f]{64}  tsc-rs-[0-9][^ ]*-(darwin|linux)-(arm64|x64)\.tar\.gz$'"
+check "versions sort numerically by major version" "[ \"\$(printf '2.0.0\\n10.0.0\\n9.1.0\\n' | bash -c '. \"$REPO/lib/utils.bash\"; sort_versions' | tail -n 1)\" = 10.0.0 ]"
+check "latest-stable treats its filter as a literal prefix and exits 0 on no match" "[ \"\$(\"$PLUGIN/bin/latest-stable\" 0.1)\" = 0.1.0 ] && [ -z \"\$(\"$PLUGIN/bin/latest-stable\" 99)\" ]"
 
 # Checksum mismatches, through patched copies of the plugin. Each must have
 # downloaded the archive, printed the mismatch, exited nonzero and deleted it.
@@ -144,6 +146,9 @@ check "enable refuses a profile with an unterminated block and leaves it unchang
 check "disable refuses it too" "! asdf cmd tsc-rs disable shell \"$WORK/half.sh\" >/dev/null 2>&1 && cmp -s \"$WORK/half.sh\" \"$WORK/half.before\""
 printf '# >>> asdf-tsc-rs >>>\n# <<< asdf-tsc-rs <<<\nexport MID=1\n# >>> asdf-tsc-rs >>>\n# <<< asdf-tsc-rs <<<\n' >"$WORK/twice.sh" && cp "$WORK/twice.sh" "$WORK/twice.before"
 check "enable refuses a profile with two blocks" "! asdf cmd tsc-rs enable shell \"$WORK/twice.sh\" >/dev/null 2>&1 && cmp -s \"$WORK/twice.sh\" \"$WORK/twice.before\""
+printf 'keep1\n# <<< asdf-tsc-rs <<<\nkeep2\n# >>> asdf-tsc-rs >>>\nafter1\n' >"$WORK/rev.sh" && cp "$WORK/rev.sh" "$WORK/rev.before"
+check "enable and disable refuse reversed markers and leave the profile unchanged" "! asdf cmd tsc-rs enable shell \"$WORK/rev.sh\" >/dev/null 2>&1 && ! asdf cmd tsc-rs disable shell \"$WORK/rev.sh\" >/dev/null 2>&1 && cmp -s \"$WORK/rev.sh\" \"$WORK/rev.before\""
+check "a refused enable or disable keeps no backup" "! ls \"$STATE/backups\"/rev.sh.* >/dev/null 2>&1 && ! ls \"$STATE/backups\"/half.sh.* >/dev/null 2>&1"
 check "enable refuses a profile for an unsupported shell" "! asdf cmd tsc-rs enable shell \"$WORK/x.cshrc\" >/dev/null 2>&1 && [ ! -e \"$WORK/x.cshrc\" ]"
 
 asdf cmd tsc-rs enable shell "$WORK/p1.sh" >/dev/null 2>&1
@@ -162,6 +167,19 @@ asdf cmd tsc-rs enable shell "$WORK/p2.sh" >/dev/null 2>&1
 check "disable without XDG_DATA_HOME still finds targets enabled with it" "env -u XDG_DATA_HOME asdf cmd tsc-rs disable >/dev/null 2>&1 && ! grep -qF \"$PROXY\" \"$WORK/p2.sh\""
 XDG_DATA_HOME="$HOME/.local/share" asdf cmd tsc-rs enable shell "$WORK/p2.sh" >/dev/null 2>&1
 check "disable with XDG_DATA_HOME still finds targets enabled without it" "asdf cmd tsc-rs disable >/dev/null 2>&1 && ! grep -qF tsc-proxy.cjs \"$WORK/p2.sh\""
+asdf cmd tsc-rs enable claude "$WORK/c3.json" >/dev/null 2>&1
+check "disable claude <file> without XDG_DATA_HOME finds it enabled with it" "env -u XDG_DATA_HOME asdf cmd tsc-rs disable claude \"$WORK/c3.json\" >/dev/null 2>&1 && ! grep -qF tsc-proxy.cjs \"$WORK/c3.json\" && ! grep -qF c3.json \"$STATE/targets\""
+asdf cmd tsc-rs enable claude "$WORK/newcfg/settings.json" >/dev/null 2>&1
+check "a settings file created by enable claude is private (0600)" "[ \"\$(node -e 'console.log((require(\"fs\").statSync(process.argv[1]).mode & 0o777).toString(8))' \"$WORK/newcfg/settings.json\")\" = 600 ]"
+check "the backups folder is private (0700)" "[ \"\$(node -e 'console.log((require(\"fs\").statSync(process.argv[1]).mode & 0o777).toString(8))' \"$STATE/backups\")\" = 700 ]"
+asdf cmd tsc-rs disable claude "$WORK/newcfg/settings.json" >/dev/null 2>&1
+mkdir -p "$WORK/gl" && for i in 01 02 03 04 05 06 07 08 09 10 11; do touch "$STATE/backups/.bashrc.local.20260101T0000$i.1"; done
+printf 'x\n' >"$WORK/gl/.bashrc" && asdf cmd tsc-rs enable shell "$WORK/gl/.bashrc" >/dev/null 2>&1 && asdf cmd tsc-rs disable shell "$WORK/gl/.bashrc" >/dev/null 2>&1
+check "backing up .bashrc never prunes .bashrc.local's backups" "[ \$(find \"$STATE/backups\" -name '.bashrc.local.*' | wc -l) -eq 11 ]"
+mkdir -p "$WORK/sys" && printf 'tsc-rs system\n' >"$WORK/sys/.tool-versions"
+out="$(cd "$WORK/sys" && asdf cmd tsc-rs enable shell "$WORK/sys/prof" 2>&1)"
+check "enable in a tsc-rs system directory says it runs the project's TypeScript, not exit 127" "echo \"\$out\" | grep -q \"runs the project's own TypeScript\" && ! echo \"\$out\" | grep -q 'exit 127'"
+asdf cmd tsc-rs disable shell "$WORK/sys/prof" >/dev/null 2>&1
 
 check "with ZDOTDIR set and ~/.zshenv present, enable writes ~/.zshenv" "ZDOTDIR=\"$WORK/zd\" asdf cmd tsc-rs enable >/dev/null 2>&1 && grep -qF \"$PROXY\" \"$HOME/.zshenv\" && [ ! -e \"$WORK/zd/.zshenv\" ]"
 asdf cmd tsc-rs disable >/dev/null 2>&1
@@ -252,6 +270,13 @@ check "the first installed of several listed versions is used" "vlog | grep -q '
 mkdir -p "$WORK/logical" "$WORK/physical/proj" && printf 'tsc-rs 7.7.7\n' >"$WORK/logical/.tool-versions" && ln -sfn "$WORK/physical/proj" "$WORK/logical/proj"
 out="$(cd "$WORK/logical/proj" && node "$FX/npm/node_modules/typescript/bin/tsc" -v 2>&1)"; code=$?
 check "a directory reached through a symlink uses the .tool-versions above the link, as asdf does" "[ $code -eq 127 ] && echo \"\$out\" | grep -qF \"$WORK/logical/.tool-versions\""
+mkdir -p "$WORK/fakehome-rs/bin" && printf '#!/bin/sh\necho home-path "$@"\n' >"$WORK/fakehome-rs/bin/tsc-rs" && chmod +x "$WORK/fakehome-rs/bin/tsc-rs"
+printf 'tsc-rs path:%s\n' "$WORK/fakehome-rs" >"$FX/npm/.tool-versions"
+out="$(node node_modules/typescript/bin/tsc -v 2>&1)"; code=$?
+check "path: in a project's .tool-versions is refused with exit 127" "[ $code -eq 127 ] && echo \"\$out\" | grep -q 'accepted only from' && ! echo \"\$out\" | grep -q home-path"
+rm -f "$FX/npm/.tool-versions" && cp "$HOME/.tool-versions" "$WORK/home-tv.before" && printf 'tsc-rs path:%s\n' "$WORK/fakehome-rs" >"$HOME/.tool-versions"
+check "path: in ~/.tool-versions is accepted" "[ \"\$(node node_modules/typescript/bin/tsc -v)\" = 'home-path -v' ]"
+cp "$WORK/home-tv.before" "$HOME/.tool-versions"
 printf 'tsc-rs 9.9.9\n' >"$FX/npm/.tool-versions"
 out="$(npm run -s v 2>&1)"; code=$?
 check "an uninstalled version exits 127 with the install command" "[ $code -eq 127 ] && echo \"\$out\" | grep -q 'asdf install tsc-rs 9.9.9' && ! echo \"\$out\" | grep -q 'Version 5'"
@@ -279,6 +304,11 @@ out="$(ASDF_TSC_RS_VERSION=../../x node node_modules/typescript/bin/tsc -v 2>&1)
 check "a version naming another directory is refused with exit 127" "[ $code -eq 127 ] && echo \"\$out\" | grep -q 'not a valid'"
 out="$(ASDF_DATA_DIR="$WORK/no-asdf" node node_modules/typescript/bin/tsc -v 2>&1)"; code=$?
 check "a removed plugin says to remove the redirect" "[ $code -eq 127 ] && echo \"\$out\" | grep -q 'plugin is not installed'"
+before=$(wc -l <"$TSC_RS_LOG")
+check "node --check on the tsc entry only checks syntax" "node --check node_modules/typescript/bin/tsc && [ \$(wc -l <\"$TSC_RS_LOG\") -eq $before ]"
+out="$(cd "$WORK" && node node_modules/typescript/bin/tsc -v 2>&1)"; code=$?
+check "a tsc entry that doesn't exist fails in node and starts nothing" "[ $code -ne 0 ] && echo \"\$out\" | grep -q 'Cannot find module' && ! echo \"\$out\" | grep -q Version && [ \$(wc -l <\"$TSC_RS_LOG\") -eq $before ]"
+check "node <typescript/lib/tsc> (no extension) selects tsc-rs" "node node_modules/typescript/lib/tsc -v | grep -q '7\\.'"
 check "a bad TSC_RS value exits 64" "TSC_RS=tsgo npm run -s v >/dev/null 2>&1; [ \$? -eq 64 ]"
 out="$(ASDF_TSC_RS_VERSION="$(fake recurse "exec node \"$FX/npm/node_modules/typescript/bin/tsc\" \"\$@\"")" node node_modules/typescript/bin/tsc -v 2>&1)"; code=$?
 check "recursion through the binary is refused with exit 70" "[ $code -eq 70 ] && echo \"\$out\" | grep -q 'refusing to redirect'"

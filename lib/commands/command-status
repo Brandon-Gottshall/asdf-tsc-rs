@@ -34,3 +34,4 @@ esac
 if [ -n "${TSC_RS:-}" ]; then echo "selection:  TSC_RS=$TSC_RS"; else echo "selection:  tsc-rs (TSC_RS is unset)"; fi
 echo "version:"
 asdf current tsc-rs 2>&1 | sed 's/^/  /'
+[ "$(current_version)" != system ] || echo "  (system: tsc in this directory runs the project's own TypeScript)"

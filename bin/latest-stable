@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 . "$(dirname "$0")/../lib/utils.bash"
-list_all_versions | grep -vE -- '-(preview|alpha|beta|rc)' | grep -E "^${1:-}" | sort_versions | tail -n1
+list_all_versions | grep -vE -- '-(preview|alpha|beta|rc)' | awk -v p="${1:-}" 'index($0, p) == 1' | sort_versions | tail -n1

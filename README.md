@@ -81,9 +81,10 @@ directory reached through a symlink:
 3. otherwise the one in your home directory
 
 If an entry lists several versions, the first installed one wins. `system` means "use the project's
-own TypeScript", and `path:<absolute dir>` runs `<dir>/bin/tsc-rs`. Relative `path:` values and
-versions containing `/` are refused, so a `.tool-versions` can't point `tsc` at an arbitrary
-binary through a relative path.
+own TypeScript", and `path:<absolute dir>` runs `<dir>/bin/tsc-rs`. `path:` is accepted only from
+`ASDF_TSC_RS_VERSION` or `~/.tool-versions`, never from a project's `.tool-versions`. Versions
+containing `/` are refused too. So a repository you check out can't make `tsc` run a binary of its
+choosing.
 
 Set your default with `asdf set -u tsc-rs <version>`, which writes `~/.tool-versions`. A project
 without a `tsc-rs` line, or with no `.tool-versions` at all, then uses it, and a project can still

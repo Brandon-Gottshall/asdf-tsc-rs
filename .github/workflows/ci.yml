@@ -35,6 +35,12 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        bash: [default]
+        include:
+          # macOS's own /bin/bash is 3.2; make sure the plugin still runs under it.
+          - os: macos-latest
+            bash: system
+    name: e2e (${{ matrix.os }}, bash ${{ matrix.bash }})
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -47,4 +53,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y zsh fish
       - if: runner.os == 'macOS'
         run: brew install fish
+      - if: matrix.bash == 'system'
+        run: |
+          mkdir -p "$RUNNER_TEMP/system-bash"
+          ln -sf /bin/bash "$RUNNER_TEMP/system-bash/bash"
+          echo "$RUNNER_TEMP/system-bash" >> "$GITHUB_PATH"
+      - run: bash --version | head -n 1
       - run: test/run.sh "$RUNNER_TEMP/tsc-rs-e2e"

@@ -17,7 +17,8 @@
 //      directory upwards, walking $PWD as asdf does when it names the same directory
 //   3. the one in the home directory
 // Each source may list several versions; the first installed one is used.
-// "system" runs the upstream compiler; "path:<absolute dir>" runs <dir>/bin/tsc-rs.
+// "system" runs the upstream compiler. "path:<absolute dir>" runs <dir>/bin/tsc-rs, but only
+// from ASDF_TSC_RS_VERSION or ~/.tool-versions: a project's file can't name a binary.
 //
 // Opt-out:  TSC_RS=typescript runs the upstream compiler for that command.
 // Failure:  no version, or a version that is not installed, exits 127 with the
@@ -29,21 +30,26 @@
 (function tscRsProxy() {
   const entry = process.argv[1];
   if (!entry || entry.indexOf('tsc') === -1) return;
-  // `node -e/-p/-i` treats argv[1] as data, not as the program.
+  // `node -e/-p/-i` treats argv[1] as data, and `node --check` only parses it.
   const ev = process.execArgv;
   for (let i = 0; i < ev.length; i++) {
-    if (/^(-e|--eval|-p|--print|-i|--interactive)(=|$)/.test(ev[i])) return;
+    if (/^(-e|--eval|-p|--print|-i|--interactive|-c|--check)(=|$)/.test(ev[i])) return;
   }
 
   const fs = require('fs');
   const path = require('path');
   const os = require('os');
-  let real = entry;
-  try { real = fs.realpathSync(entry); } catch (_) { /* keep as given */ }
+  // Resolve the entry the way node will (`lib/tsc` means `lib/tsc.js`). An entry
+  // that doesn't resolve is left for node to report; nothing is started for it.
+  let resolved, real;
+  try {
+    resolved = require.resolve(path.resolve(entry));
+    real = fs.realpathSync(resolved);
+  } catch (_) { return; }
   if (!/[\\/]typescript[\\/](bin[\\/]tsc|lib[\\/]_?tsc\.js)$/.test(real)) return;
   // Another copy of a tsc redirect already took this run (it stubs the entry
   // module before spawning); running a second compiler would double the work.
-  if (require.cache[real]) return;
+  if (require.cache[real] || require.cache[resolved]) return;
 
   const env = process.env;
   const started = Date.now();
@@ -138,6 +144,8 @@
   }
   record.versions = found.versions;
   record.version_source = found.source;
+  // Sources only the user controls. A project's .tool-versions is not one of them.
+  const trusted = found.source === 'ASDF_TSC_RS_VERSION' || found.source === path.join(os.homedir(), toolVersionsName);
 
   let bin = null;
   for (const v of found.versions) {
@@ -148,8 +156,11 @@
     if (v.startsWith('ref:')) {
       fail(127, 'unsupported-version', `"${v}" (from ${found.source}) is not supported; the tsc-rs plugin installs released versions only.`);
     }
-    // A relative path: or a version naming another directory would let any
-    // parent .tool-versions run an arbitrary binary; asdf versions are plain names.
+    // A path: from a project's file would let any checkout run its own binary (even an
+    // absolute one, such as /proc/self/cwd/... on Linux); asdf versions are plain names.
+    if (v.startsWith('path:') && !trusted) {
+      fail(127, 'unsupported-version', `"${v}" (from ${found.source}) is not supported; path: versions are accepted only from ASDF_TSC_RS_VERSION or ~/.tool-versions.`);
+    }
     if (v.startsWith('path:') && !path.isAbsolute(v.slice(5))) {
       fail(127, 'unsupported-version', `"${v}" (from ${found.source}) is not supported; path: versions must be absolute.`);
     }
@@ -183,6 +194,7 @@
   stub.filename = real;
   stub.loaded = true;
   require.cache[real] = stub;
+  require.cache[resolved] = stub;
 
   const child = require('child_process').spawn(bin, args, {
     stdio: 'inherit',

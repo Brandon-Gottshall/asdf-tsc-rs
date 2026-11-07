@@ -9,9 +9,9 @@ case "${1:-}" in
 "") disable_all || rc=1 ;;
 shell)
 	file="${2:-$(default_shell_file)}"
-	disable_target shell "$(abspath "$file")" || rc=1
+	disable_everywhere shell "$(abspath "$file")" || rc=1
 	;;
-claude) disable_target claude "$(abspath "${2:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json}")" || rc=1 ;;
+claude) disable_everywhere claude "$(abspath "${2:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json}")" || rc=1 ;;
 help)
 	cat <<'USAGE'
 usage: asdf cmd tsc-rs disable [target]

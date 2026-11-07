@@ -139,10 +139,12 @@ backup() {
 	[ -e "$1" ] || return 0
 	local dir="$TSC_RS_HOME/backups" name dest
 	name="$(basename "$1")"
-	mkdir -p "$dir" || return 1
+	# Backups can include settings files that hold secrets, so the folder is private.
+	mkdir -p "$dir" && chmod 0700 "$dir" || return 1
 	dest="$dir/$name.$(date +%Y%m%dT%H%M%S).$$"
 	cp -p "$1" "$dest" || return 1
-	local old=("$dir/$name".*)
+	# Only this file's own copies: "$name".* alone would also match .bashrc.local's.
+	local old=("$dir/$name".[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]T[0-9][0-9][0-9][0-9][0-9][0-9].*)
 	local n=$((${#old[@]} - BACKUPS_KEPT)) i
 	for ((i = 0; i < n; i++)); do rm -f "${old[$i]}"; done
 	echo "$dest"
@@ -193,23 +195,25 @@ shell_block() { # file
 }
 
 # Rewrites a file in place (following symlinks, keeping its mode) without the
-# marked block, then appends <block> when one is given. Refuses a file whose
-# markers are unbalanced, rather than guess where a damaged block ends.
+# marked block, then appends <block> when one is given. Refuses a file unless
+# it has no markers or exactly one start marker followed by one end marker,
+# rather than guess where a damaged block ends.
 rewrite_shell_file() { # file [block]
-	local file="$1" block="${2:-}" tmp begins ends
+	local file="$1" block="${2:-}" tmp
 	mkdir -p "$(dirname "$file")" || return 1
 	[ -e "$file" ] || : >"$file" || return 1
-	begins="$(grep -cxF "$BEGIN_MARK" "$file" || true)"
-	ends="$(grep -cxF "$END_MARK" "$file" || true)"
-	if [ "$begins" -gt 1 ] || [ "$begins" != "$ends" ]; then
-		say "$file has $begins \"$BEGIN_MARK\" and $ends \"$END_MARK\" lines; expected one of each or none. Fix the asdf-tsc-rs block by hand; the file was not changed"
+	tmp="$(mktemp "${TMPDIR:-/tmp}/asdf-tsc-rs.XXXXXX")" || return 1
+	# state: 0 before the block, 1 inside it, 2 after it. Any other order fails.
+	if ! awk -v b="$BEGIN_MARK" -v e="$END_MARK" '
+		$0 == b { if (state != 0) { bad = 1; exit }; state = 1; next }
+		$0 == e { if (state != 1) { bad = 1; exit }; state = 2; next }
+		state != 1 { print }
+		END { if (bad || state == 1) exit 2 }
+	' "$file" >"$tmp"; then
+		rm -f "$tmp"
+		say "$file has a damaged asdf-tsc-rs block: expected one \"$BEGIN_MARK\" line followed by one \"$END_MARK\" line, or neither. Fix it by hand; the file was not changed"
 		return 1
 	fi
-	tmp="$(mktemp "${TMPDIR:-/tmp}/asdf-tsc-rs.XXXXXX")" || return 1
-	awk -v b="$BEGIN_MARK" -v e="$END_MARK" '$0 == b {skip = 1; next} $0 == e {skip = 0; next} !skip' "$file" >"$tmp" || {
-		rm -f "$tmp"
-		return 1
-	}
 	if [ -n "$block" ]; then
 		# Keep one blank line between existing content and the block.
 		if [ -s "$tmp" ] && [ -n "$(tail -c 1 "$tmp")" ]; then echo >>"$tmp"; fi
@@ -262,7 +266,7 @@ const indent = (text.match(/^[ \t]+(?=")/m) || ['  '])[0];
 const real = exists ? fs.realpathSync(file) : file;
 fs.mkdirSync(path.dirname(real), { recursive: true });
 const tmp = `${real}.asdf-tsc-rs.${process.pid}`;
-fs.writeFileSync(tmp, JSON.stringify(data, null, indent) + '\n', { mode: exists ? fs.statSync(real).mode & 0o777 : 0o644 });
+fs.writeFileSync(tmp, JSON.stringify(data, null, indent) + '\n', { mode: exists ? fs.statSync(real).mode & 0o777 : 0o600 });
 fs.renameSync(tmp, real);
 for (const r of removed) if (mode === 'enable' && !r.includes(proxy)) console.log(`replaced ${r.trim()}`);
 console.log('changed');
@@ -278,7 +282,10 @@ enable_target() { # kind [file]
 		mkdir -p "$(dirname "$file")"
 		file="$(abspath "$file")"
 		saved="$(backup "$file")"
-		rewrite_shell_file "$file" "$(shell_block "$file")"
+		rewrite_shell_file "$file" "$(shell_block "$file")" || {
+			[ -z "$saved" ] || rm -f "$saved"
+			exit 1
+		}
 		record_target shell "$file"
 		if [ -n "$saved" ] && cmp -s "$saved" "$file"; then
 			rm -f "$saved"
@@ -318,22 +325,32 @@ enable_target() { # kind [file]
 DISABLED_ANY=0
 # shellcheck disable=SC2034 # DISABLED_ANY is read by command-disable, which sources this file
 disable_target() {
-	local kind="$1" file="$2" out
+	local kind="$1" file="$2" out saved
 	case "$kind" in
 	shell)
 		if [ -f "$file" ] && grep -qxF "$BEGIN_MARK" "$file"; then
-			backup "$file" >/dev/null || return 1
-			rewrite_shell_file "$file" || return 1
+			saved="$(backup "$file")" || return 1
+			rewrite_shell_file "$file" || {
+				[ -z "$saved" ] || rm -f "$saved"
+				return 1
+			}
 			DISABLED_ANY=1
 			say "disabled in $file"
 		fi
 		;;
 	claude)
 		if [ -f "$file" ] && grep -qF "$PROXY" "$file"; then
-			backup "$file" >/dev/null || return 1
-			out="$(edit_claude_settings disable "$file")" || return 1
-			[ "$out" = unchanged ] || DISABLED_ANY=1
-			say "disabled in $file"
+			saved="$(backup "$file")" || return 1
+			out="$(edit_claude_settings disable "$file")" || {
+				[ -z "$saved" ] || rm -f "$saved"
+				return 1
+			}
+			if [ "$out" = unchanged ]; then
+				[ -z "$saved" ] || rm -f "$saved"
+			else
+				DISABLED_ANY=1
+				say "disabled in $file"
+			fi
 		fi
 		;;
 	*)
@@ -342,6 +359,18 @@ disable_target() {
 		;;
 	esac
 	forget_target "$kind" "$file"
+}
+
+# disable_everywhere <kind> <file>: disables one file for the redirect of every
+# state directory, so it works whatever XDG_DATA_HOME was when it was enabled.
+disable_everywhere() {
+	local h rc=0
+	while IFS= read -r h; do
+		use_home "$h"
+		disable_target "$1" "$2" || rc=1
+	done < <(state_homes)
+	use_home "${XDG_DATA_HOME:-$HOME/.local/share}/asdf-tsc-rs"
+	return "$rc"
 }
 
 # Disables every recorded target in every state directory: shell profiles
@@ -372,8 +401,13 @@ disable_all() {
 	return 0
 }
 
+# current_version: the version asdf selects here ("system" included), or empty.
+current_version() { asdf current tsc-rs 2>/dev/null | awk '$1 == "tsc-rs" {print $2; exit}'; }
+
 version_hint() {
-	if ! asdf current tsc-rs >/dev/null 2>&1; then
+	if [ "$(current_version)" = system ]; then
+		say "note: tsc-rs system is set here, so tsc in this directory runs the project's own TypeScript"
+	elif ! asdf current tsc-rs >/dev/null 2>&1; then
 		say "note: no tsc-rs version is set here, so tsc will fail with exit 127 until you run"
 		say "  asdf install tsc-rs latest && asdf set -u tsc-rs latest"
 	fi
