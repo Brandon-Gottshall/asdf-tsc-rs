@@ -85,15 +85,27 @@ own TypeScript", and `path:<absolute dir>` runs `<dir>/bin/tsc-rs`. Relative `pa
 versions containing `/` are refused, so a `.tool-versions` can't point `tsc` at an arbitrary
 binary through a relative path.
 
-To keep one project on its own TypeScript permanently, add `tsc-rs system` to its `.tool-versions`.
-Because `ASDF_TSC_RS_VERSION` comes first, setting it in an environment makes that environment's
-version win over every project's file.
+Set your default with `asdf set -u tsc-rs <version>`, which writes `~/.tool-versions`. A project
+without a `tsc-rs` line, or with no `.tool-versions` at all, then uses it, and a project can still
+opt out or pin another version in its own file.
+
+`ASDF_TSC_RS_VERSION` comes first, so setting it in an environment overrides every project's file,
+including `tsc-rs system`. Use it only where no project should be able to opt out, such as a CI
+job that must check everything with tsc-rs.
 
 ### Opting out
 
+- **For one project:** run `asdf set tsc-rs system` in it, or add this line to its `.tool-versions`
+  (other tools' lines stay as they are):
+
+  ```
+  tsc-rs system
+  ```
+
+  Everything under that directory then runs the project's own TypeScript. Commit the line to opt
+  the project out for everyone who uses the redirect.
 - **For one command:** `TSC_RS=typescript npm run build` runs the TypeScript the project would
   normally run.
-- **For one project:** add `tsc-rs system` to its `.tool-versions`.
 - **Everywhere:** `asdf cmd tsc-rs disable`.
 
 ### When tsc-rs can't run

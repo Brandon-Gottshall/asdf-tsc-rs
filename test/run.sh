@@ -258,6 +258,8 @@ check "an uninstalled version exits 127 with the install command" "[ $code -eq 1
 check "ASDF_TSC_RS_VERSION beats .tool-versions" "ASDF_TSC_RS_VERSION=$PIN npm run -s v | grep -q '7\.'"
 printf 'tsc-rs system\n' >"$FX/npm/.tool-versions"
 check "\"system\" runs the project's TypeScript" "npm run -s v | grep -q 'Version 5.9.3' && vlog | grep -q '\"selected_by\":\"system\"'"
+printf 'nodejs 22.0.0\n' >"$FX/npm/.tool-versions" && asdf set tsc-rs system >/dev/null 2>&1
+check "asdf set tsc-rs system opts the project out and keeps its other lines" "grep -qx 'nodejs 22.0.0' .tool-versions && npm run -s v | grep -q 'Version 5.9.3'"
 printf 'tsc-rs ref:main\n' >"$FX/npm/.tool-versions"
 check "ref: versions are refused with exit 127" "npm run -s v >/dev/null 2>&1; [ \$? -eq 127 ]"
 printf 'tsc-rs %s\n' "$PIN" >"$FX/npm/.tv-alt" && printf 'tsc-rs 9.9.9\n' >"$FX/npm/.tool-versions"
